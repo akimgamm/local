@@ -1,14 +1,16 @@
 
 
-BX.ajax.runComponentAction('dstapps:ownkanban', 'greet', {
+BX.ajax.runComponentAction('dstapps:ownkanban', '', {
   mode: 'class', //это означает, что мы хотим вызывать действие из class.php
   data: {
-      person: 'Akim!' //данные будут автоматически замаплены на параметры метода 
+    className: "OwnKanbanTasks",
+    methodName: "createTable",
+    person: 'Akim!' //данные будут автоматически замаплены на параметры метода 
   },
   analyticsLabel: {
-      viewMode: 'grid',
-      filterState: 'closed'	
-  }	
+    viewMode: 'grid',
+    filterState: 'closed'
+  }
 }).then(function (response) {
   console.log(response);
   /**
@@ -17,7 +19,7 @@ BX.ajax.runComponentAction('dstapps:ownkanban', 'greet', {
       "data": "Hi Hero!", 
       "errors": []
   }
-  **/			
+  **/
 }, function (response) {
   //сюда будут приходить все ответы, у которых status !== 'success'
   console.log(response);
@@ -26,10 +28,29 @@ BX.ajax.runComponentAction('dstapps:ownkanban', 'greet', {
       "status": "error", 
       "errors": [...]
   }
-  **/				
+  **/
 });
 
 
+
+
+
+
+
+
+
+class Application {
+  static async sendAjax(component, action, mode, params) {
+
+    const request = await BX.ajax.runComponentAction(component, action, {
+        mode: mode,
+        data: params
+    });
+
+    return await request.data
+}
+  
+}
 
 
 function application() { };
@@ -77,7 +98,7 @@ class Click {
     });
   }
 
-  static addButtonClick = function (groups) {
+  static addButtonClick = async function (groups) {
     let that = this;
     console.log(this);
 
@@ -108,15 +129,17 @@ class Click {
 
     Elements.main.classList.remove('black');
 
-    let s = "";
+    let usersConnectedGroupsIds = "";
     for (let i = 0; i < Elements.checkedIds.length; i++) {
-      s += Elements.checkedIds[i];
-      if (i != Elements.checkedIds.length - 1) s += ",";
+      usersConnectedGroupsIds += Elements.checkedIds[i];
+      if (i != Elements.checkedIds.length - 1) usersConnectedGroupsIds += ",";
     }
 
     //записываем в базу отмеченные группы 
-    let ref = "https://192.168.210.12/php-mvc-master/public/?/user/&userId=" + User.id + "&usersConnectedGroupsIds=" + s;
-    let d = app.localHook(ref);
+   // let ref = "https://192.168.210.12/php-mvc-master/public/?/user/&userId=" + User.id + "&usersConnectedGroupsIds=" + s; //Готово
+    await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanUsersSettings',methodName:'setUsersGroupsIds',params:{userId:User.id, usersConnectedGroupsIds: usersConnectedGroupsIds}})
+    // let d = app.localHook(ref);
+    
   }
 
   static myTasksButtonClick = function (myTasksButton) {
@@ -263,6 +286,29 @@ class Elements {
   static main = document.getElementById('main');
   static top = document.getElementById('top');
   static workarea = document.getElementsByClassName('workarea-content-paddings')[0];
+  static loader = `
+
+  <div id="loader" class="loader">
+
+<div class="lds-grid">
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+  <div></div>
+</div>
+
+<div style="display: inline-block; vertical-align: middle;" class="loader-titles">
+  <div class="row"><i> Идёт загрузка задач</i></div>
+  <div class="row">
+   
+  </div>
+</div>
+</div>`;
 
   static async redesignBitrixDOM() {
     let additionalBody = document.createElement('div');
@@ -451,10 +497,14 @@ class User {
   static id = userIDauth;
 
   static userInfo = async function () {
-    let ref = "https://192.168.210.12/php-mvc-master/public/?/user/&userId=" + User.id;
-    let user = await app.localHook(ref);
+    // let ref = "https://192.168.210.12/php-mvc-master/public/?/user/&userId=" + User.id; //Сделал
+    // let user = await app.localHook(ref);
+
+    let user = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanUsersSettings',methodName:'getUser',params:{userId:User.id}})
+
     User.info = user[0];
     console.log(User.info);
+    
 
     return user[0];
   };
@@ -470,7 +520,7 @@ class Logic {
 
   }
 
-  static async getAddiotionalTaskInfo() {
+  static async getAddiotionalTaskInfo() { //переделать -- модель получения дополнительных данных по задаче
     Logic.taskList.forEach(() => {
 
     })
@@ -479,6 +529,8 @@ class Logic {
     // tasklistIds = tasklistIds.toString();
     tasklistIds = tasklistIds.join("','");
 
+  
+
 
 
     Logic.tasklistIds = "'" + tasklistIds + "'";
@@ -486,9 +538,11 @@ class Logic {
     console.log(Logic.taskList, Logic.tasklistIds)
 
 
-    let ref = "https://192.168.210.12/php-mvc-master/public/?/getTasks/&taskIds=" + tasklistIds;
-    let d = await app.localHook(ref);
-    console.log(ref, d, Logic.taskList)
+    // let ref = "https://192.168.210.12/php-mvc-master/public/?/getTasks/&taskIds=" + tasklistIds; //Сделал, но переделать -- модель получения дополнительных данных по задаче
+    let d = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'getTasks',params:{tasklistIds:tasklistIds}})
+    console.log(d);
+    // let d = await app.localHook(ref);
+    // console.log(ref, d, Logic.taskList)
 
     Logic.taskList.forEach((task, i) => {
       let dbArr = d.filter((dbTask, i) => {
@@ -683,8 +737,8 @@ class Logic {
     let taskId = event.target.parentNode.getAttribute("id").split('-')[1];
 
 
-    let ref = `https://192.168.210.12/php-mvc-master/public/?/setTasksColors/&taskId=${taskId}&color=${color.slice(1)}`;
-    let d = app.localHook(ref);
+    // let ref = `https://192.168.210.12/php-mvc-master/public/?/setTasksColors/&taskId=${taskId}&color=${color.slice(1)}`; //Пока что ненужный функционал для замены цвета карточки
+    // let d = app.localHook(ref); //Пока что ненужный функционал для замены цвета карточки
 
     console.log(taskId, color, ref);
 
@@ -693,18 +747,23 @@ class Logic {
   }
 
   static async setFinalConnected(params) {
-   
+
 
 
     // Если у юзера в бд нет данных о подключенных проектах, то обращаемся к базе к перечню проектов по-дефолту
     if (User.info.connected_groups_ids == null || User.info.connected_groups_ids == '') {
 
-      let ref = "https://192.168.210.12/php-mvc-master/public/?/getConnectedGroupsIds/";
-      let d = await app.localHook(ref);
+      // let ref = "https://192.168.210.12/php-mvc-master/public/?/getConnectedGroupsIds/"; //Пока что ненужный функционал
+      // let d = await app.localHook(ref);
 
-      Logic.finalConnected = d.connected_groups_ids.split(',');
+      // Logic.finalConnected = d.connected_groups_ids.split(',');
+      Logic.finalConnected = [259]; //Типовая шаблонная группа
+      Logic.nullSavedGroups = true;
+
+      alert("Для начала работы необходимо подключить проекты в разделе настроек")
     } else {
       Logic.finalConnected = User.info.connected_groups_ids.split(',');
+      
     }
 
     // Logic.finalConnected = GIds;
@@ -714,21 +773,31 @@ class Logic {
 
 
 
+
+
   static divTaskPriorityOnChange = async function (divTaskPriority) {
     console.log(divTaskPriority);
-    // alert(divTaskPriority.value);
-    let d = await app.localHook("https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value);
+    let h = "https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value;
+    console.log(h);
+    alert(divTaskPriority.value);
+    // let d = await app.localHook("https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value);
+
+    // let d = await app.localHook("https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value);
     // console.log(d,d[0].priority);
+    let d = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'setTasksPriority',params:{taskId: divTaskPriority.getAttribute("id"), taskPriority: divTaskPriority.value}})
+    console.log("newp",d);
   }
 
   static getTaskPriority = async function (task, divTaskPriority, divTaskColorBlock) {
     let ref = "https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value;
-    let d = await app.localHook(ref);
-    console.log(ref);
+    // let d = await app.localHook(ref);
+    let d = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'setTasksPriority',params:{taskId: divTaskPriority.getAttribute("id")}})
+    
+    console.log(d,ref);
     // console.log(d,divTaskPriority);
 
     let priority = d[0].priority;
-    // task.dbPriority = priority;
+    task.dbPriority = priority;
     console.log(priority, task.dbPriority)
     let color = d[0].color;
     console.log(color, divTaskColorBlock);
@@ -1651,7 +1720,7 @@ class Logic {
           console.log(tasks, taskss);
 
           let stageIndex = Calculate.getKeyByValue(Elements.stages, stageTitle);
-          console.log(stageIndex,Elements.stages,stageTitle)
+          console.log(stageIndex, Elements.stages, stageTitle)
           Logic.addProjectDepartments(stageIndex, project);
           Logic.addDepartmentTasksDivs(stageIndex, department, project, app);
           Logic.addTasks(tasks, department)
@@ -2444,7 +2513,7 @@ class Logic {
       filter: {
         "GROUP_ID": Logic.finalConnected,
       }, //Массив групп
-      start:1
+      start: 1
     }
 
     let tasks = await app.bitrixHook(params, "https://dstural24.ru/rest/830/l7bann8u7zjtvy8v/tasks.task.list.json");
@@ -2715,30 +2784,8 @@ class Draw {
     // }) 
 
     //upView.main.innerHTML = "";
-    Elements.main.innerHTML = "";
-    Elements.main.innerHTML = `
-
-    <div id="loader" class="loader">
-
-  <div class="lds-grid">
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-  </div>
-
-  <div style="display: inline-block; vertical-align: middle;" class="loader-titles">
-    <div class="row"><i> Идёт загрузка задач</i></div>
-    <div class="row">
-     
-    </div>
-  </div>
-</div>`;
+    // Elements.main.innerHTML = "";
+    Elements.main.innerHTML = Elements.loader;
 
     Elements.stageTaskLists.innerHTML = "";
     console.log(Elements.stageTaskLists);
@@ -2806,7 +2853,6 @@ class Draw {
 }
 
 application.prototype.run = async function () {
-
 
 
 
