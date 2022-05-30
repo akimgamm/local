@@ -1,41 +1,5 @@
 
 
-BX.ajax.runComponentAction('dstapps:ownkanban', '', {
-  mode: 'class', //это означает, что мы хотим вызывать действие из class.php
-  data: {
-    className: "OwnKanbanTasks",
-    methodName: "createTable",
-    person: 'Akim!' //данные будут автоматически замаплены на параметры метода 
-  },
-  analyticsLabel: {
-    viewMode: 'grid',
-    filterState: 'closed'
-  }
-}).then(function (response) {
-  console.log(response);
-  /**
-  {
-      "status": "success", 
-      "data": "Hi Hero!", 
-      "errors": []
-  }
-  **/
-}, function (response) {
-  //сюда будут приходить все ответы, у которых status !== 'success'
-  console.log(response);
-  /**
-  {
-      "status": "error", 
-      "errors": [...]
-  }
-  **/
-});
-
-
-
-
-
-
 
 
 
@@ -51,6 +15,8 @@ class Application {
 }
   
 }
+
+
 
 
 function application() { };
@@ -543,18 +509,23 @@ class Logic {
     console.log(d);
     // let d = await app.localHook(ref);
     // console.log(ref, d, Logic.taskList)
-
-    Logic.taskList.forEach((task, i) => {
-      let dbArr = d.filter((dbTask, i) => {
-        return task.id == dbTask.id;
+    if (d.length == 0) {
+      task.dbPriority = 1;
+    } else {
+      Logic.taskList.forEach((task, i) => {
+        let dbArr = d.filter((dbTask, i) => {
+          return task.id == dbTask.id;
+        })
+  
+        task.dbPriority = dbArr[0].priority;
+  
+        console.log(dbArr)
+  
+  
       })
-
-      task.dbPriority = dbArr[0].priority;
-
-      console.log(dbArr)
+    }
 
 
-    })
 
 
   }
@@ -779,7 +750,7 @@ class Logic {
     console.log(divTaskPriority);
     let h = "https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value;
     console.log(h);
-    alert(divTaskPriority.value);
+    // alert(divTaskPriority.value);
     // let d = await app.localHook("https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value);
 
     // let d = await app.localHook("https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value);
@@ -2483,7 +2454,7 @@ class Logic {
 
   static async getAllUpViewTasks() {
 
-
+    alert('upView');
     // console.log(GIds);
     let params = {
       filter: {
@@ -2505,6 +2476,7 @@ class Logic {
 
   static async getAllDefaultTasks() {
 
+    alert('getAllDefaultTasks');
     // alert(Logic.finalConnected)
     console.log(Logic.finalConnected)
 
@@ -2515,7 +2487,7 @@ class Logic {
       }, //Массив групп
       start: 1
     }
-
+    // let d = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'getTasksOrm',params:{}})
     let tasks = await app.bitrixHook(params, "https://dstural24.ru/rest/830/l7bann8u7zjtvy8v/tasks.task.list.json");
     console.log(tasks);
     console.log(tasks.total);
@@ -2526,22 +2498,13 @@ class Logic {
   }
 
   static async loadDefaultTasks() {
-    this.view = 'defaultTasks';
-    this.viewType = 'defaultViewType';
+    this.view = 'top';
+    this.viewType = 'projectsViewType';
 
-    let myTasksButton = document.getElementById("list-type-my");
-    let othersTasksButton = document.getElementById("list-type-all");
-    let viewTypeDepartments = document.getElementById("view-type-departments");
-    let viewTypeProjects = document.getElementById("view-type-projects");
-
-
-    // othersTasksButton.classList.add("list-type-active");
-    // viewTypeDepartments.classList.add("view-type-active");
 
 
     Draw.draw();
 
-    console.log(document.getElementById('list-type-all'));
 
   }
 
@@ -2769,7 +2732,6 @@ class Logic {
 class Draw {
 
   static list = {
-    "defaultTasks": Logic.getAllDefaultTasks,
     "top": Logic.getAllDefaultTasks,
   }
 
@@ -2792,11 +2754,11 @@ class Draw {
 
     console.log(Logic.UpView);
 
-    if (Logic.view == "defaultTasks" || Logic.view == "top") {
+    // if (Logic.view == "defaultTasks" || Logic.view == "top") {
       // await Logic.getAllDefaultTasks(); //Получаем список всех задач по всем подключенным группам
       await Draw.list[Logic.view]();
-      console.log();
-    }
+    
+    // }
 
     if (Logic.view == "othersTasks") {
 
@@ -2857,7 +2819,9 @@ application.prototype.run = async function () {
 
 
 
-
+  let d = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'getTasksOrm',params:{}})
+    
+  console.log(d);
 
 
 
@@ -2945,41 +2909,6 @@ application.prototype.run = async function () {
   // await app.getMyTasks(); //Получить все мои группы
 
   console.log(logic);
-
-  //   document.body.innerHTML +=
-  //   `
-  // <div class='selector'>
-  //   <div class='selector-handle'>
-  //   </div>
-  //   </div>
-  // </div>
-
-  // `;
-
-  // (function () {
-  //   $(function () {
-  //     return $('.selector').on('click', function () {
-  //       if ($(this).hasClass('on')) {
-  //         return $(this).removeClass('on');
-  //       } else {
-  //         return $(this).addClass('on');
-  //       }
-  //     });
-  //   });
-
-  // }).call(this);
-
-
-
-  //app.animate();
-
-  // await upView.filterByStages();
-
-  // await upView.drawKanban();
-
-  // await upView.downViewFilter();
-
-
 
 
 

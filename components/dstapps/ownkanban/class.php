@@ -3,8 +3,36 @@ use Bitrix\Main\Loader;
 
 use Bitrix\Main\Engine\Contract\Controllerable;
 
+
 //Класс работы с Задачами. CRUD для таблицы дополнительных свойств задачи
 class OwnKanbanTasks {
+  public static function getTasksOrm()
+  {
+
+    global $DB;
+    $strSql = "SELECT *
+    FROM `b_tasks` LEFT JOIN `my_own_kanban_tasks`
+    ON b_tasks.ID = my_own_kanban_tasks.ID WHERE b_tasks.ID = '90300' ";
+
+    $query = $DB->Query($strSql, false);
+
+    while ($item = $query->NavNext()) {
+      $tasks[] = $item;
+    }
+
+ 
+    return $tasks;
+    // $query->registerRuntimeField(
+    //   $cityTableName,
+    //   [
+    //     'data_type' => CityTable::getEntity(),
+    //     'reference' => [
+    //       // '=this.city_id' => 'ref.id',
+    //     ],
+    //     'join_type' => "LEFT"
+    //   ]
+    // );
+  }
 
   public function createTable(){
     global $DB;

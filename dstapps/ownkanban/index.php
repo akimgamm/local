@@ -9,6 +9,16 @@ $APPLICATION->IncludeComponent(
     )
 );
 
+// $APPLICATION->IncludeComponent(
+//   "dstapps:afisha2",
+//   "",
+//   Array(
+//     "X"=>"123",
+//   )
+// );
+
+
+
 
 
 ?>
