@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function(event) {
   console.log("DOM fully loaded and parsed");
-  app.run();
+  Application.run();
   // setTimeout(app.run, 10000);
 
   // let timerId = setInterval(() => app.run(), 10000);

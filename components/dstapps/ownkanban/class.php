@@ -6,14 +6,14 @@ use Bitrix\Main\Engine\Contract\Controllerable;
 
 //Класс работы с Задачами. CRUD для таблицы дополнительных свойств задачи
 class OwnKanbanTasks {
-  public static function getTasksOrm()
+  public static function getAllTasks($params)
   {
 
     global $DB;
-    $strSql = "SELECT *
-    FROM `b_tasks` LEFT JOIN `my_own_kanban_tasks`
-    ON b_tasks.ID = my_own_kanban_tasks.ID WHERE b_tasks.ID = '90300' ";
 
+    $finalConnected = join(',',$params['finalConnected']);
+    $strSql = "SELECT * FROM `b_tasks` WHERE GROUP_ID='$finalConnected' ";
+    // return $strSql;
     $query = $DB->Query($strSql, false);
 
     while ($item = $query->NavNext()) {
@@ -128,6 +128,25 @@ class OwnKanbanTasks {
     // return $stmt->execute();;
   }
 
+  public static function getTasksStopperComments() {
+    global $DB;
+    $strSql = "SELECT * FROM `my_own_kanban_tasks_comments`";;
+
+    $res = $DB->Query($strSql, false);
+    $res = $res->Fetch();
+    return $res;
+  }
+
+  public static function setTasksStopperComments() {
+    global $DB;
+    $strSql = "INSERT INTO `my_own_kanban_tasks_comments`
+    VALUES (value1, value2, value3, 1212);";
+
+    $res = $DB->Query($strSql, false);
+    $res = $res->Fetch();
+    return $res;
+  }
+
 
 
   public function turnedInfo() {
@@ -214,7 +233,10 @@ class OwnKanbanUsersSettings
 
 
 class OwnKanban extends \CBitrixComponent implements Controllerable
-{
+{   
+
+
+
     //Родительский метод проходит по всем параметрам переданным в $APPLICATION->IncludeComponent
     //и применяет к ним функцию htmlspecialcharsex. В данном случае такая обработка избыточна.
     //Переопределяем.
@@ -376,9 +398,9 @@ class UserModel
     $db->query("UPDATE `kanban_tasks` SET priority ='$taskPriority' WHERE id='$taskId'");
 
     return ("UPDATE `kanban_tasks` SET priority ='$taskPriority' WHERE id='$taskId'");
-
-    
   }
+
+
 
   // public static function setTasksColor($taskId,$color)
   // {

@@ -793,3 +793,21 @@ button:focus:not(:active) {
     background-size: contain;
     cursor: pointer;
   }
+
+  .blockquote-7 {
+    border: 2px solid #337AB7;
+    font-size: 16px;
+    font-style: italic;
+    margin: 16px 31px 31px 16px;
+    padding: 16px 24px;
+    position: relative;
+    box-shadow: 15px 15px 0 0 #337AB7; 
+}
+
+.blockquote-7 cite {
+    color: #337AB7;
+    font-size: 15px;
+    padding-top: 10px;
+    display: block;
+    text-align: right;
+}

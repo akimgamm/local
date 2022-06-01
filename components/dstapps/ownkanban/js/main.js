@@ -1,8 +1,3 @@
-
-
-
-
-
 class Application {
   static async sendAjax(component, action, mode, params) {
 
@@ -11,7 +6,91 @@ class Application {
         data: params
     });
 
-    return await request.data
+    return await request.data;
+}
+
+static async run() {
+
+
+  let tooltipElem;
+
+  document.onmouseover = function (event) {
+    let target = event.target;
+
+    // если у нас есть подсказка...
+    let tooltipHtml = target.dataset.tooltip;
+    if (!tooltipHtml) return;
+
+    // ...создадим элемент для подсказки
+
+    tooltipElem = document.createElement('div');
+    tooltipElem.className = 'tooltip';
+    tooltipElem.innerHTML = tooltipHtml;
+    document.body.append(tooltipElem);
+
+    // спозиционируем его сверху от аннотируемого элемента (top-center)
+    let coords = target.getBoundingClientRect();
+
+    let left = coords.left + (target.offsetWidth - tooltipElem.offsetWidth) / 2;
+    if (left < 0) left = 0; // не заезжать за левый край окна
+
+    let top = coords.top - tooltipElem.offsetHeight - 5;
+    top += 50;
+    if (top < 0) { // если подсказка не помещается сверху, то отображать её снизу
+      top = coords.top + target.offsetHeight + 5;
+      top -= 50;
+    }
+
+    tooltipElem.style.left = left + 'px';
+    tooltipElem.style.top = top + 'px';
+  };
+
+  document.onmouseout = function (e) {
+
+    if (tooltipElem) {
+      tooltipElem.remove();
+      tooltipElem = null;
+    }
+
+  };
+
+
+  // BX.addCustomEvent("SidePanel.Slider:OnTaskAdd", function (event) { //Обновление страницы по событию закрытия слайдера(модального окна выезжающего влево)
+  //   // if (event.getSlider().getUrl() === "calendar:settings") //для глобальных обработчиков проверяем свой слайдер
+  //   // {
+  //   //    event.denyAction();
+  //   // }
+  //   Draw.draw();
+
+  // });
+
+  // console.log(await User.);
+  await Elements.redesignBitrixDOM();
+  //Записываем впервые зашедшего пользователя
+  await User.userInfo(); //Получаем данные о пользователе из базы
+  await Logic.setFinalConnected();
+
+
+  await Logic.addConnectedGroups(); //Для подключения проекта список проектов, верхнее меню кнопок
+  await Logic.loadDefaultTasks(); //Загрузка последнего сохраненного списка проектов
+
+
+  // if (BX.SidePanel.Instance.isOpen()) {
+  //   alert("слайдер открыт");
+  // } else {
+  //   alert("слайдер закрыт");
+
+  // }
+
+
+
+
+ 
+
+
+
+
+
 }
   
 }
@@ -19,7 +98,7 @@ class Application {
 
 
 
-function application() { };
+function application() {};
 app = new application();
 
 
@@ -50,12 +129,15 @@ class Click {
     });
   }
 
-  static additionalInfoClick = function (optionsButton) {
-    BX.SidePanel.Instance.open("https://dstural24.ru/local/apps/kanban/options.php", {
+  static additionalInfoClick = async function (task) {
+    let tasks2 = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'getTasksStopperComments',params:{finalConnected:Logic.finalConnected}})
+    console.log(Object.values(tasks2));
+    tasks2=Object.values(tasks2);
+    BX.SidePanel.Instance.open("https://dstural124.ru/local/dstapps/ownkanban/options.php", {
       requestMethod: "post",
       requestParams: { // post-параметры
         action: "load",
-        ids: [1, 2, 3],
+        ids: tasks2.join(),
         dictionary: {
           one: 1,
           two: 2
@@ -68,7 +150,7 @@ class Click {
     let that = this;
     console.log(this);
 
-    Logic.view = 'top';
+    Logic.view = 'allTasks';
 
     var connectedGroupsCheckboxes = document.getElementsByClassName('groups-el'), checkedBoxes = []
 
@@ -131,7 +213,7 @@ class Click {
 
 
     if (tasksSelector.classList.contains("on")) {
-      Logic.view = 'othersTasks';
+      Logic.view = 'allTasks';
       Draw.draw();
       tasksSelectorText.textContent = "Все задачи";
       tasksSelector.classList.remove("on");
@@ -185,7 +267,7 @@ class Click {
 
 
   static othersTasksButtonClick = function (othersTasksButton) {
-    Logic.view = 'othersTasks';
+    Logic.view = 'allTasks';
     Draw.draw();
 
     let listTypeMy = document.getElementById("list-type-my");
@@ -409,28 +491,6 @@ application.prototype.sortObjectByName = function (o) {
 }
 
 
-class UpView {
-  constructor(logic) {
-    this.allStagess = [];
-    this.main = document.getElementById('main');
-    this.top = document.getElementById('top');
-    this.logic = logic;
-
-  }
-
-
-
-
-
-
-
-
-
-}
-
-
-
-
 application.prototype.animate = function () {
 
   const animateCSS = (element, animation, prefix = 'animate__') =>
@@ -487,11 +547,9 @@ class Logic {
   }
 
   static async getAddiotionalTaskInfo() { //переделать -- модель получения дополнительных данных по задаче
-    Logic.taskList.forEach(() => {
+ 
 
-    })
-
-    let tasklistIds = Logic.taskList.map(task => { return task.id; });
+    let tasklistIds = Logic.taskList.map(task => { return task.id; }); //получаю Id задач через запятую
     // tasklistIds = tasklistIds.toString();
     tasklistIds = tasklistIds.join("','");
 
@@ -516,10 +574,11 @@ class Logic {
         let dbArr = d.filter((dbTask, i) => {
           return task.id == dbTask.id;
         })
+
   
-        task.dbPriority = dbArr[0].priority;
-  
-        console.log(dbArr)
+        // task.dbPriority = dbArr[0].priority;
+        task.additionalDbInfo = dbArr[0];
+        console.log(task)
   
   
       })
@@ -534,7 +593,7 @@ class Logic {
 
     let divDepSign;
     //В зависимости от отображения берем разные элементы
-    if (Logic.viewType == "defaultViewType" || Logic.viewType == "departmentsViewType") {
+    if (Logic.viewType == "departmentsViewType") {
       divDepSign = document.getElementById('dep-' + department.id + '-proj' + project.id + 'sign');
     } else {
       divDepSign = document.getElementById('dep-' + project.id + '-proj' + department.id + 'sign');
@@ -719,8 +778,6 @@ class Logic {
 
   static async setFinalConnected(params) {
 
-
-
     // Если у юзера в бд нет данных о подключенных проектах, то обращаемся к базе к перечню проектов по-дефолту
     if (User.info.connected_groups_ids == null || User.info.connected_groups_ids == '') {
 
@@ -728,7 +785,7 @@ class Logic {
       // let d = await app.localHook(ref);
 
       // Logic.finalConnected = d.connected_groups_ids.split(',');
-      Logic.finalConnected = [259]; //Типовая шаблонная группа
+      Logic.finalConnected = [259]; //Типовая пустая шаблонная группа
       Logic.nullSavedGroups = true;
 
       alert("Для начала работы необходимо подключить проекты в разделе настроек")
@@ -760,35 +817,28 @@ class Logic {
   }
 
   static getTaskPriority = async function (task, divTaskPriority, divTaskColorBlock) {
-    let ref = "https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value;
+    // let ref = "https://192.168.210.12/php-mvc-master/public/?/setTasksPriority/&taskId=" + divTaskPriority.getAttribute("id") + "&taskPriority=" + divTaskPriority.value;
     // let d = await app.localHook(ref);
-    let d = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'setTasksPriority',params:{taskId: divTaskPriority.getAttribute("id")}})
+    // let d = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'setTasksPriority',params:{taskId: divTaskPriority.getAttribute("id")}})
+    // let color = d[0].color;
+    // console.log(color, divTaskColorBlock);
+
+    // if (task.additionalDbInfo.priority == 610) { divTaskColorBlock.style.background = "red" } else {
+    //   divTaskColorBlock.style.background = color;
+    // }
+
+
+    // let values = [1, 2, 3, 5, 8, 13, 21, 34, 55, 144, 233, 377, 610];
+    // divTaskPriority.innerHTML = "";
+    // let selected = "";
+
+    // values.forEach((el, i) => {
+    //   if (el == task.dbPriority) { selected = "selected"; } else { selected = "" }
+    //   divTaskPriority.innerHTML += "<option " + selected + ">" + el + "</option>";
+    // })
+
+
     
-    console.log(d,ref);
-    // console.log(d,divTaskPriority);
-
-    let priority = d[0].priority;
-    task.dbPriority = priority;
-    console.log(priority, task.dbPriority)
-    let color = d[0].color;
-    console.log(color, divTaskColorBlock);
-
-    if (task.dbPriority == 610) { divTaskColorBlock.style.background = "red" } else {
-      divTaskColorBlock.style.background = color;
-    }
-
-
-    let values = [1, 2, 3, 5, 8, 13, 21, 34, 55, 144, 233, 377, 610];
-    divTaskPriority.innerHTML = "";
-    let selected = "";
-
-    values.forEach((el, i) => {
-      if (el == task.dbPriority) { selected = "selected"; } else { selected = "" }
-      divTaskPriority.innerHTML += "<option " + selected + ">" + el + "</option>";
-    })
-
-
-    // return d[0].priority;
 
 
   }
@@ -1171,20 +1221,7 @@ class Logic {
       divTaskColorBlock.onclick = function () {
         inputTaskColorPickerHidden.click();
 
-        // let coords = target.getBoundingClientRect();
 
-        // let left = coords.left + (target.offsetWidth - tooltipElem.offsetWidth) / 2;
-        // if (left < 0) left = 0; // не заезжать за левый край окна
-
-        // let top = coords.top - tooltipElem.offsetHeight - 5;
-        // // top += 50;
-        // if (top < 0) { // если подсказка не помещается сверху, то отображать её снизу
-        //   top = coords.top + target.offsetHeight + 5;
-        //   // top -= 50;
-        // }
-
-        // tooltipElem.style.left = left + 'px';
-        // tooltipElem.style.top = top + 'px';
       };
 
       inputTaskColorPickerHidden.addEventListener("change", Logic.colorPickerInput, false);
@@ -1207,44 +1244,25 @@ class Logic {
       let divTaskPriority = document.createElement('select');
       divTaskPriority.classList.add('task-priority');
       divTaskPriority.setAttribute('id', task.id);
+    
 
-      // let taskDB = await this.divTaskPriorityGet(divTaskPriority);
-
-      // console.log(taskDB);
-
-      //Получаю значение приоритета из базы и вывожу
-      Logic.getTaskPriority(task, divTaskPriority, divTaskColorBlock)
-      // console.log(priority, );
-
-      //  let s = await Logic.getAllStage();
-      //  console.log(s);
-
-
-
-      // divTaskPriority.innerHTML = "<option>1</option>" +
-      //   "<option>2</option>" +
-      //   "<option>3</option>" +
-      //   "<option>5</option>" +
-      //   "<option>8</option>" +
-      //   "<option>13</option>" +
-      //   "<option>21</option>" +
-      //   "<option>34</option>" +
-      //   "<option>55</option>" +
-      //   "<option>144</option>" +
-      //   "<option>233</option>" +
-      //   "<option>377</option>" +
-      //   "<option>610</option>";
+      if (task.additionalDbInfo.priority == 610) { divTaskColorBlock.style.background = "red" } else {
+        divTaskColorBlock.style.background = task.additionalDbInfo.color;
+      }
+  
+  
+      let values = [1, 2, 3, 5, 8, 13, 21, 34, 55, 144, 233, 377, 610];
+      divTaskPriority.innerHTML = "";
+      let selected = "";
+  
+      values.forEach((el, i) => {
+        if (el == task.additionalDbInfo.priority) { selected = "selected"; } else { selected = "" }
+        divTaskPriority.innerHTML += "<option " + selected + ">" + el + "</option>";
+      })
+  
 
       divTaskPriority.onchange = Logic.divTaskPriorityOnChange.bind(Logic, divTaskPriority);
-
-
-
-
       divTaskPriorityWrap.appendChild(divTaskPriority, divTaskColorBlock);
-
-
-
-
 
 
       let divTaskInfoWrap = document.createElement('div');
@@ -1392,14 +1410,9 @@ class Logic {
       let divAdditionalInfo = document.createElement('div'); //Ответственный
       divAdditionalInfo.classList.add('task-additional-info');
       divAdditionalInfo.setAttribute('title', "Дополнительная информация по задаче");
-      divAdditionalInfo.onclick = Click.additionalInfoClick;
-
+      divAdditionalInfo.onclick = Click.additionalInfoClick.bind(this, task);
 
       divTask.appendChild(divAdditionalInfo);
-
-
-
-
 
       divTaskCollection.push(divTask);
 
@@ -1478,24 +1491,12 @@ class Logic {
 
       // console.log(taskDB);
 
-      that.getTaskPriority(divTaskPriority)
+      // that.getTaskPriority(divTaskPriority)
       // console.log(priority, );
 
 
 
-      // divTaskPriority.innerHTML = "<option>1</option>" +
-      //   "<option>2</option>" +
-      //   "<option>3</option>" +
-      //   "<option>5</option>" +
-      //   "<option>8</option>" +
-      //   "<option>13</option>" +
-      //   "<option>21</option>" +
-      //   "<option>34</option>" +
-      //   "<option>55</option>" +
-      //   "<option>144</option>" +
-      //   "<option>233</option>" +
-      //   "<option>377</option>" +
-      //   "<option>610</option>";
+     
 
       divTaskPriority.onchange = this.divTaskPriorityOnChange.bind(this, divTaskPriority);
 
@@ -1670,7 +1671,7 @@ class Logic {
 
     Object.values(Logic.projects).forEach((project, i) => {  //Для Всех проектов
 
-      //console.log(upView)
+   
 
       Logic.drawProjects(project); //Для всех колодцев заполняю наличие проектов с определенной высотой
       Logic.drawProjectSigns(project); //Для всех проектов рисую ярлыки с названиями
@@ -1714,7 +1715,7 @@ class Logic {
 
     Object.values(Logic.departments).forEach((department, i) => {  //Для Всех проектов
 
-      //console.log(upView)
+  
 
       Logic.drawProjects(department); //Для всех колодцев заполняю наличие проектов с определенной высотой
       Logic.drawDownProjectSigns(department); //Для всех проектов рисую ярлыки с названиями
@@ -1941,23 +1942,6 @@ class Logic {
     let tasks = await app.bitrixHook(params, "https://dstural24.ru/rest/830/l7bann8u7zjtvy8v/tasks.task.update.json");
   }
 
-  // static async updateNullStage(task) {
-  //   let projectArrays = Object.values(Logic.allStages).filter(stage => stage.ENTITY_ID == task.groupId); //Фильтрую общий список всех стадий, беру стадии равные Стадиям проекта задачи
-  //   console.log(Logic.allStages, projectArrays)
-  //   let secondStageId = projectArrays[1].ID //Id первой стадии проекта задачи
-
-  //   task.stageId = secondStageId;
-
-
-
-
-  //   let params = {
-  //     "taskId": task.id,
-  //     'fields': { STAGE_ID: secondStageId }
-  //   }
-
-  //   // let tasks = await app.bitrixHook(params, "https://dstural24.ru/rest/830/l7bann8u7zjtvy8v/tasks.task.update.json");
-  // }
 
 
   static async updateFinishedStage(task, upView) {
@@ -2414,9 +2398,6 @@ class Logic {
   }
 
 
-
-
-
   router() {
     window.onclick = function (event) {
       event = event || window.event;
@@ -2428,7 +2409,7 @@ class Logic {
     this.router();
   }
 
-  static async getAllMyTasks() {
+  static async getMyTasks() {
 
 
 
@@ -2452,10 +2433,8 @@ class Logic {
     Logic.taskList = tasks;
   }
 
-  static async getAllUpViewTasks() {
+  static async getAllTasks() {
 
-    alert('upView');
-    // console.log(GIds);
     let params = {
       filter: {
         "GROUP_ID": Logic.finalConnected,
@@ -2463,7 +2442,9 @@ class Logic {
     }
 
     let tasks = await app.bitrixHook(params, "https://dstural24.ru/rest/830/l7bann8u7zjtvy8v/tasks.task.list.json");
-    console.log(tasks);
+    // let tasks2 = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'getAllTasks',params:{finalConnected:Logic.finalConnected}})
+
+    // console.log(tasks, tasks2);
     console.log(tasks.total);
 
 
@@ -2474,32 +2455,11 @@ class Logic {
   }
 
 
-  static async getAllDefaultTasks() {
 
-    alert('getAllDefaultTasks');
-    // alert(Logic.finalConnected)
-    console.log(Logic.finalConnected)
-
-    // GIds.pop();
-    let params = {
-      filter: {
-        "GROUP_ID": Logic.finalConnected,
-      }, //Массив групп
-      start: 1
-    }
-    // let d = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'getTasksOrm',params:{}})
-    let tasks = await app.bitrixHook(params, "https://dstural24.ru/rest/830/l7bann8u7zjtvy8v/tasks.task.list.json");
-    console.log(tasks);
-    console.log(tasks.total);
-
-    tasks = tasks.tasks;//
-
-    Logic.taskList = tasks;
-  }
 
   static async loadDefaultTasks() {
-    this.view = 'top';
-    this.viewType = 'projectsViewType';
+    this.view = 'allTasks';
+    this.viewType = 'departmentsViewType';
 
 
 
@@ -2597,44 +2557,8 @@ class Logic {
     };
 
 
-    // let addTaskButton = document.createElement('a'); //кнопка добавления задачи
-    // addTaskButton.textContent = 'Добавить задачу';
-    // addTaskButton.classList.add('groups-button');
-    // addTaskButton.classList.add('top-menu-button');
-    // addTaskButton.classList.add('top-a-button');
-
-    // // addTaskButton.setAttribute("onclick","return location.href = '/company/personal/user/830/tasks/task/edit/0/' ");
-    // addTaskButton.setAttribute('href', "/company/personal/user/830/tasks/task/edit/0/") //!!!
 
 
-
-
-    // let myTasksButton = document.createElement('button');
-    // myTasksButton.textContent = "Мои задачи";
-    // myTasksButton.classList.add('groups-button');
-    // myTasksButton.classList.add('top-menu-button');
-    // myTasksButton.classList.add('list-type');
-    // myTasksButton.setAttribute("id", 'list-type-my');
-
-    // if(this.view == 'myTasks') {
-    //   myTasksButton.classList.add("");
-    // }
-
-    // myTasksButton.setAttribute("id",'top-menu-button');
-    // myTasksButton.onclick = Click.myTasksButtonClick.bind(this, myTasksButton);
-
-
-
-    // let othersTasksButton = document.createElement('button');
-    // othersTasksButton.textContent = "Все задачи";
-    // othersTasksButton.classList.add('groups-button');
-    // othersTasksButton.classList.add('top-menu-button');
-    // othersTasksButton.classList.add('list-type'); //подсветка  при нажатии
-    // othersTasksButton.setAttribute("id", 'list-type-all');
-
-
-    // // myTasksButton.setAttribute("id",'top-menu-button');
-    // othersTasksButton.onclick = Click.othersTasksButtonClick.bind(this, othersTasksButton);
 
     let departmentsViewTypeButton = document.createElement('button');
     departmentsViewTypeButton.textContent = "Отделы в проектах";
@@ -2731,44 +2655,29 @@ class Logic {
 
 class Draw {
 
-  static list = {
-    "top": Logic.getAllDefaultTasks,
+  static viewList = {
+    "allTasks": Logic.getAllTasks,
+    "myTasks": Logic.getMyTasks
   }
+
+  static viewTypeList = {
+    "departmentsViewType": Logic.getAllTasks,
+    "projectsViewType": Logic.getMyTasks
+  }
+
 
   static async draw() {
 
     Logic.loading = true;
 
 
-    // document.getElementById("view-type-projects").click(e=> {
-    //   alert(111)
-    //   e.preventDefault();
-    // }) 
 
-    //upView.main.innerHTML = "";
-    // Elements.main.innerHTML = "";
     Elements.main.innerHTML = Elements.loader;
-
     Elements.stageTaskLists.innerHTML = "";
-    console.log(Elements.stageTaskLists);
+ 
 
-    console.log(Logic.UpView);
-
-    // if (Logic.view == "defaultTasks" || Logic.view == "top") {
-      // await Logic.getAllDefaultTasks(); //Получаем список всех задач по всем подключенным группам
-      await Draw.list[Logic.view]();
+    await Draw.viewList[Logic.view]();
     
-    // }
-
-    if (Logic.view == "othersTasks") {
-
-
-      await Logic.getAllUpViewTasks(); //Все задачи
-    }
-
-    if (Logic.view == "myTasks") {
-      await Logic.getAllMyTasks(); //Мои задачи
-    }
 
     Logic.getAddiotionalTaskInfo();
 
@@ -2781,7 +2690,7 @@ class Draw {
     await Logic.addDepSigns(); //Ярлыки подразделений
     await Logic.printAllStages(); //Отрисовываем полученные колонки
 
-    if (Logic.viewType == "defaultViewType" || Logic.viewType == "departmentsViewType") {
+    if (Logic.viewType == "departmentsViewType") {
       await Logic.upViewProjectFilter();
       await Logic.upViewStagesFilter();
       await Logic.drawUpViewKanban(app);
@@ -2803,116 +2712,7 @@ class Draw {
 
   }
 
-  constructor() {
-    this.main = document.getElementById('main');
-  }
-
-
-
-
-
-
 }
 
-application.prototype.run = async function () {
-
-
-
-
-  let d = await Application.sendAjax('dstapps:ownkanban','testinfo','class',{className:'OwnKanbanTasks',methodName:'getTasksOrm',params:{}})
-    
-  console.log(d);
-
-
-
-
-
-
-
-
-
-  let tooltipElem;
-
-  document.onmouseover = function (event) {
-    let target = event.target;
-
-    // если у нас есть подсказка...
-    let tooltipHtml = target.dataset.tooltip;
-    if (!tooltipHtml) return;
-
-    // ...создадим элемент для подсказки
-
-    tooltipElem = document.createElement('div');
-    tooltipElem.className = 'tooltip';
-    tooltipElem.innerHTML = tooltipHtml;
-    document.body.append(tooltipElem);
-
-    // спозиционируем его сверху от аннотируемого элемента (top-center)
-    let coords = target.getBoundingClientRect();
-
-    let left = coords.left + (target.offsetWidth - tooltipElem.offsetWidth) / 2;
-    if (left < 0) left = 0; // не заезжать за левый край окна
-
-    let top = coords.top - tooltipElem.offsetHeight - 5;
-    top += 50;
-    if (top < 0) { // если подсказка не помещается сверху, то отображать её снизу
-      top = coords.top + target.offsetHeight + 5;
-      top -= 50;
-    }
-
-    tooltipElem.style.left = left + 'px';
-    tooltipElem.style.top = top + 'px';
-  };
-
-  document.onmouseout = function (e) {
-
-    if (tooltipElem) {
-      tooltipElem.remove();
-      tooltipElem = null;
-    }
-
-  };
-
-  //Объявление классов
-  let logic = new Logic; //Основная логика приложения
-
-  // BX.addCustomEvent("SidePanel.Slider:OnTaskAdd", function (event) { //Обновление страницы по событию закрытия слайдера(модального окна выезжающего влево)
-  //   // if (event.getSlider().getUrl() === "calendar:settings") //для глобальных обработчиков проверяем свой слайдер
-  //   // {
-  //   //    event.denyAction();
-  //   // }
-  //   Draw.draw();
-
-  // });
-
-  // console.log(await User.);
-  await Elements.redesignBitrixDOM();
-  //Записываем впервые зашедшего пользователя
-  await User.userInfo(); //Получаем данные о пользователе из базы
-  await Logic.setFinalConnected();
-
-
-  await Logic.addConnectedGroups(); //Для подключения проекта список проектов, верхнее меню кнопок
-  await Logic.loadDefaultTasks(); //Загрузка последнего сохраненного списка проектов
-
-
-  // if (BX.SidePanel.Instance.isOpen()) {
-  //   alert("слайдер открыт");
-  // } else {
-  //   alert("слайдер закрыт");
-
-  // }
-
-
-
-
-  // await app.getMyTasks(); //Получить все мои группы
-
-  console.log(logic);
-
-
-
-
-}
 
 
